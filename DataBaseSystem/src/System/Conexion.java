@@ -50,6 +50,27 @@ public class Conexion {
         }
     }
     
+    public void abcd(String File)
+    {
+        this.conecta();
+            st = null;
+            String query;
+            try
+            {
+                st=con.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE,
+                    ResultSet.CONCUR_UPDATABLE);
+                query = "SELECT * FROM Datos INTO OUTFILE '"+File+"' "
+                        + "FIELDS TERMINATED BY ',' "
+                        + "LINES TERMINATED BY '\r\n'";
+                st.executeQuery(query);
+                JOptionPane.showMessageDialog(null, "Archivo Creado");
+            }
+            catch(SQLException e)
+            {
+                JOptionPane.showMessageDialog(null, e.getMessage());
+            }
+    }
+    
     public void crear(String insertar){
         this.conecta();
 		st = null;

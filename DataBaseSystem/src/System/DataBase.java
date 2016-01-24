@@ -7,13 +7,23 @@ package System;
 
 
 import java.awt.HeadlessException;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.DefaultCellEditor;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JComboBox;
+import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumn;
@@ -36,6 +46,7 @@ public class DataBase extends javax.swing.JFrame {
     ResultSet rs;
     ArrayList Encabezado = new ArrayList();
     ArrayList tipoDato = new ArrayList();
+    JFileChooser choose = new JFileChooser();
     
     /**
      * Creates new form DataBase
@@ -190,55 +201,57 @@ public class DataBase extends javax.swing.JFrame {
         if(fila>0)//Si hay filas en la tabla
         {
             /////////////////////////////////////////////////////////////////////////////7
-            for(int x=0;x<fila;x++)//Obtiene los datos de la tabla
-                {
-                    for(int y=0;y<columna;y++)
-                    {
-                        if(y==1)
-                        {
-                            tipoDato.add(modeloT.getValueAt(x,y));
-                        }
-                        else
-                        {
-                            Encabezado.add(modeloT.getValueAt(x,y));
-                        }
-                        
-                    }
-                }
+            ObtenerDatos(fila, columna, modeloT);
             ////////////////CREACION DE BASE///////////////////////////////////////////////////////
             String acumula="";
             cadenas = cadenaConsulta(tipoDato);
             conexion.insertar("CREATE DATABASE "+nombrebase);
             conexion.insertar("DROP VIEW IF EXISTS v_tipodato");
             conexion.insertar("CREATE VIEW v_tipodato AS SELECT "+tipoDato.get(0)+""+cadenas+" FROM informacion");
-            JOptionPane.showMessageDialog(null, "Hecho");
+            //JOptionPane.showMessageDialog(null, "Hecho");
             for(int w=1;w<Encabezado.size();w++)
             {
-                        acumula+=","+Encabezado.get(w)+" varchar(80)";
+                        acumula+=","+Encabezado.get(w)+" varchar(51)";
             }
             conexion.parameter(nombrebase);
             //JOptionPane.showMessageDialog(null,"CREATE TABLE Datos ("+Encabezado.get(0)+" varchar(30)"+acumula+")");
-            conexion.crear("CREATE TABLE Datos ("+Encabezado.get(0)+" varchar(80)"+acumula+")");
+            conexion.crear("CREATE TABLE Datos ("+Encabezado.get(0)+" varchar(51)"+acumula+")");
+            conexion.crear("CREATE TABLE uno (abc varchar(20))");
+            
+            
             conexion.crear("CREATE PROCEDURE inserciones_sp(IN numero INT) "
                     + "BEGIN "
-                    + "INSERT INTO Datos SELECT * FROM registros.v_tipodato LIMIT numero,1; "
+                    + "INSERT INTO Datos SELECT * FROM registros.v_tipodato LIMIT numero,2; "
                     + "INSERT INTO Datos SELECT * FROM Datos;"
                     + "END");
-            JOptionPane.showMessageDialog(null, "Hecho");
+            
+            
+            
+            /*conexion.crear("CREATE TRIGGER t_uno AFTER INSERT ON uno "
+                    + "FOR EACH ROW "
+                    + "BEGIN "
+                    //+ "DECLARE x INT DEFAULT 1; "
+                    //+ "WHILE x<1 DO "
+                    + "INSERT INTO Datos SELECT * FROM Datos; "
+                    //+ "SET x=x+1; "
+                    //+ "END WHILE;"
+                    + "END");*/
+            //JOptionPane.showMessageDialog(null, "Hecho");
             //JOptionPane.showMessageDialog(null, (rndm.nextInt(300-1+1)+1));
             //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             long start = System.currentTimeMillis();
-            for(int d=1;d<20;d++)
+            for(int d=18;d>0;d--)
             {
                 insercion();
             }
+            //conexion.crear("INSERT INTO uno SELECT name FROM registros.v_tipodato LIMIT 1,1");
             long stop = System.currentTimeMillis();
             long tiempo = (stop - start)/1000;
             JOptionPane.showMessageDialog(null, "Base creada. Tiempo: "+tiempo+" s.");
             
             /////////////////////////////////////////////////////////////////////////////
-            radios();
+            radios(nombrebase);
         }
         else//Si no hay filas en la tabla
         {
@@ -310,64 +323,82 @@ public class DataBase extends javax.swing.JFrame {
     public void insercion()
     {
         conexion.crear("CALL inserciones_sp("+(rndm.nextInt(300-1+1)+1)+")");
-               /* try
+               
+    }
+    public void ObtenerDatos(int fila,int columna,TableModel modeloT)
+    {
+        for(int x=0;x<fila;x++)//Obtiene los datos de la tabla
                 {
-                    while(rs.next())
+                    for(int y=0;y<columna;y++)
                     {
-                        
-                        for(int tt=1;tt<tipoDato.size();tt++)
+                        if(y==1)
                         {
-                            //JOptionPane.showMessageDialog(null, tipoDato.get(tt));
-                            consulta += ",'"+rs.getString(tt)+"'";
-                            //JOptionPane.showMessageDialog(null, consulta);
+                            tipoDato.add(modeloT.getValueAt(x,y));
                         }
-                        //JOptionPane.showMessageDialog(null, consulta);
-                        /*JOptionPane.showMessageDialog(null, "INSERT INTO Datos VALUES('"
-                                + rs.getString((tipoDato.get(0)).toString())+"'"
-                                + consulta+")");
+                        else
+                        {
+                            Encabezado.add(modeloT.getValueAt(x,y));
+                        }
                         
-                        conexion.parameter(nombrebase);
-                        conexion.crear("INSERT INTO Datos VALUES('"
-                                + rs.getString(0)+"'"
-                                + consulta+")");
                     }
                 }
-                catch(SQLException e)
-                {
-                    JOptionPane.showMessageDialog(null, "Hubo un error mientras se accesaba a la base. \n"+e.getMessage());
-                    //break;
-                }
-                catch(HeadlessException ex)
-                {
-                    JOptionPane.showMessageDialog(null, "Hubo un error, intentelo de nuevo. \n"+ex.getMessage());
-                    //break;
-                }*/
     }
     
-    public void radios()
+    public void radios(String xx)
     {
         if(rbSQL.isSelected())//Si selecciona radioButton SQL
             {
-                //JOptionPane.showMessageDialog(null, "rbSQL SELECTED");
-                /*for(int h=0;h<Encabezado.size();h++)
-                {
-                    JOptionPane.showMessageDialog(null, Encabezado.get(h));
-                }*/
-                
+                crearBackUp(xx);
             }
             else if(rbCSV.isSelected())//Si selecciona radioButton CSV
             {
-                //JOptionPane.showMessageDialog(null, "rbCSV SELECTED");
-               /* for(int h=0;h<tipoDato.size();h++)
-                {
-                    JOptionPane.showMessageDialog(null, tipoDato.get(h));
-                }*/
-                
+                String nombreArchivo = "C:/"+xx+".csv";
+                conexion.abcd(nombreArchivo);
+                  
             }
             else//Si no selecciona ningun radiobutton
             {
                 JOptionPane.showMessageDialog(null, "Selecciona el tipo de archivo a generar.");
             }
+    }
+    
+    public void crearBackUp(String archivo)
+    {
+        int res;
+        
+        res = choose.showSaveDialog(this);
+        
+        if(res==JFileChooser.APPROVE_OPTION)
+        {
+            try
+            {
+                Runtime rt = Runtime.getRuntime();
+                File file = new File(String.valueOf(choose.getSelectedFile().toString())+".sql");
+                FileWriter fw = new FileWriter(file);
+                Process pro = rt.exec("C:\\wamp\\bin\\mysql\\mysql5.6.17\\bin"
+                        +"\\mysqldump --opt --user=root --password=  --databases "+archivo+" -R");
+                
+                InputStreamReader isre = new InputStreamReader(pro.getInputStream());
+                BufferedReader bure = new BufferedReader(isre);
+                
+                String linea;
+                while((linea=bure.readLine()) != null)
+                {
+                    fw.write(linea+"\n");
+                }
+                fw.close();
+                isre.close();
+                bure.close();
+            }
+            catch(Exception e)
+            {
+                JOptionPane.showMessageDialog(null, e.getMessage());
+            }
+            JOptionPane.showMessageDialog(null, "Archivo creado");
+        }else if(res==JFileChooser.CANCEL_OPTION)
+        {
+            JOptionPane.showMessageDialog(null, "No se genero el archivo");
+        }
     }
     
     
